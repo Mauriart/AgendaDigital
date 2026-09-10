@@ -25,7 +25,7 @@ class AppAgenda(ctk.CTk):
         self.conn_params = {
             "dbname": "agenda",
             "user": "postgres",
-            "password": "put_your_password_here",
+            "password": "",
             "host": "localhost",
             "port": "5432",
         }
@@ -656,12 +656,26 @@ class AppAgenda(ctk.CTk):
     def cargar_datos_ubicaciones(self):
         try:
             rows = self.ejecutar_consulta(
-                "SELECT id_ubicacion, ubicacion, direccion, capacidad, cantidad_eventos FROM vista_ocupacion_espacio", 
+                """SELECT id_ubicacion, ubicacion, direccion, capacidad, cantidad_eventos FROM vista_ocupacion_espacio""", 
                 fetch=True                
             )
+            for item in self.tree_ubicaciones.get_children(): self.tree_ubicaciones.delete(item)
+
+            for row in rows:
+                uid = row[0]
+                nombre = row[1]
+                direccion = row[2]
+                capacidad = row[3]
+                eventos_cant = row[4]
+
+                
+                self.tree_ubicaciones.insert("", "end", values=(uid, nombre, direccion, capacidad, eventos_cant))
+
+                
+                etiqueta = f"{nombre} - #{uid}"
+                self.ubicaciones_combo[etiqueta] = uid
         except Exception as e:
-            messagebox.showerror("Error", str(e))
-            return
+            print(f"Error cargando ubicaciones: {e}")
 
     # -------------------- REFRESCO GENERAL --------------------
 
@@ -669,6 +683,7 @@ class AppAgenda(ctk.CTk):
         self.cargar_datos_usuarios()
         self.cargar_datos_categorias()
         self.cargar_datos_eventos()
+        self.cargar_datos_ubicaciones()
 
 
 if __name__ == "__main__":
