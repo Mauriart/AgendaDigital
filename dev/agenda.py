@@ -635,6 +635,34 @@ class AppAgenda(ctk.CTk):
         self.entry_ub_capacidad.pack(fill="x", padx=10, pady=6)
 
         ctk.CTkButton(form, text="+ Registrar Ubicación", command=self.agregar_ubicacion).pack(fill="x", padx=10, pady=10)
+
+    def agregar_ubicacion(self):
+        nombre = self.entry_ub_nombre.get().strip()
+        direccion = self.entry_ub_direccion.get().strip()
+        ciudad = self.entry_ub_ciudad.get().strip()
+        capacidad = self.entry_ub_capacidad.get().strip()
+        if not nombre or not capacidad.isdigit():
+            return messagebox.showwarning("Atención", "Ingresa datos válidos.")
+        try:
+            self.ejecutar_consulta(
+                "INSERT INTO ubicaciones (nombre, direccion, ciudad, capacidad) VALUES (%s, %s, %s, %s)",
+                (nombre, direccion, ciudad, int(capacidad))
+            )
+            self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Éxito", "Ubicación registrada.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def cargar_datos_ubicaciones(self):
+        try:
+            rows = self.ejecutar_consulta(
+                "SELECT id_ubicacion, ubicacion, direccion, capacidad, cantidad_eventos FROM vista_ocupacion_espacio", 
+                fetch=True                
+            )
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+            return
+
     # -------------------- REFRESCO GENERAL --------------------
 
     def actualizar_todas_las_tablas(self):
