@@ -457,6 +457,11 @@ class AppAgenda(ctk.CTk):
         self.combo_ev_categoria.set("Seleccione una categoría")
         self.combo_ev_categoria.pack(fill="x", padx=10, pady=4)
 
+        ctk.CTkLabel(form, text="Ubicación").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_ev_ubicacion = ctk.CTkComboBox(form, values=["Seleccione una ubicación"], state="readonly")
+        self.combo_ev_ubicacion.set("Seleccione una ubicación")
+        self.combo_ev_ubicacion.pack(fill="x", padx=10, pady=4)
+
         ctk.CTkLabel(form, text="Inicio").pack(anchor="w", padx=10, pady=(10, 2))
         fila_inicio = ctk.CTkFrame(form, fg_color="transparent"); fila_inicio.pack(fill="x", padx=10)
         self.fecha_inicio = self.crear_selector_fecha(fila_inicio)
@@ -530,6 +535,7 @@ class AppAgenda(ctk.CTk):
         titulo = self.entry_ev_titulo.get().strip()
         usuario = self.usuarios_combo.get(self.combo_ev_usuario.get())
         categoria = self.categorias_combo.get(self.combo_ev_categoria.get())
+        ubicacion = self.ubicaciones_combo.get(self.combo_ev_ubicacion.get())
         try:
             inicio = datetime.strptime(f"{self.obtener_fecha(self.fecha_inicio)} {self.hora_inicio.get().strip()}", "%Y-%m-%d %H:%M")
             fin = datetime.strptime(f"{self.obtener_fecha(self.fecha_fin)} {self.hora_fin.get().strip()}", "%Y-%m-%d %H:%M")
@@ -539,15 +545,15 @@ class AppAgenda(ctk.CTk):
             raise ValueError("Completa título, propietario y categoría.")
         if fin <= inicio:
             raise ValueError("La fecha y hora de finalización deben ser posteriores al inicio.")
-        return usuario, categoria, titulo, inicio, fin
+        return usuario, categoria, titulo, inicio, fin, ubicacion
 
     def agregar_evento(self):
         try:
             datos = self.datos_evento_formulario()
             self.ejecutar_consulta("""
                 INSERT INTO eventos
-                (id_usuario_propietario, id_categoria, titulo, fecha_inicio, fecha_fin)
-                VALUES (%s, %s, %s, %s, %s)
+                (id_usuario_propietario, id_categoria, id_ubicacion, titulo, fecha_inicio, fecha_fin)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """, datos)
             self.limpiar_form_evento(); self.cargar_datos_eventos()
             messagebox.showinfo("Éxito", "Evento creado correctamente.")
@@ -558,11 +564,11 @@ class AppAgenda(ctk.CTk):
         eid = self.evento_seleccionado_id()
         if eid is None: return messagebox.showwarning("Selección requerida", "Selecciona un evento.")
         try:
-            usuario, categoria, titulo, inicio, fin = self.datos_evento_formulario()
+            usuario, categoria, titulo, inicio, fin, ubicacion = self.datos_evento_formulario()
             self.ejecutar_consulta("""
-                UPDATE eventos SET id_usuario_propietario=%s, id_categoria=%s,
+                UPDATE eventos SET id_usuario_propietario=%s, id_categoria=%s, id_ubicacion=%s,
                 titulo=%s, fecha_inicio=%s, fecha_fin=%s WHERE id_evento=%s
-            """, (usuario, categoria, titulo, inicio, fin, eid))
+            """, (usuario, categoria, ubicacion, titulo, inicio, fin, eid))
             self.cargar_datos_eventos(); messagebox.showinfo("Éxito", "Evento actualizado.")
         except Exception as e:
             messagebox.showerror("No se pudo actualizar", str(e))
@@ -598,8 +604,10 @@ class AppAgenda(ctk.CTk):
 
             valores_u = ["Seleccione un usuario"] + list(self.usuarios_combo.keys())
             valores_c = ["Seleccione una categoría"] + list(self.categorias_combo.keys())
+            valores_ub = ["Seleccione una ubicación"] + list(self.ubicaciones_combo.keys())
             self.combo_ev_usuario.configure(values=valores_u)
             self.combo_ev_categoria.configure(values=valores_c)
+            self.combo_ev_ubicacion.configure(values=valores_ub)
         except Exception as e:
             print(f"Error cargando eventos: {e}")
 
