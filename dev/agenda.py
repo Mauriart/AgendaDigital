@@ -599,6 +599,39 @@ class AppAgenda(ctk.CTk):
         except Exception as e:
             print(f"Error cargando eventos: {e}")
 
+    # -------------------- Ubicaciones --------------------
+    def configurar_pestana_ubicaciones(self):
+        self.crear_encabezado(self.tab_ubicaciones, "Ubicaciones", "Gestiona las ubicaciones donde se realizarán los eventos.")
+
+        cuerpo = ctk.CTkFrame(self.tab_ubicaciones, fg_color="transparent")
+        cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
+        cuerpo.grid_columnconfigure(0, weight=3)
+        cuerpo.grid_columnconfigure(1, weight=1)
+        cuerpo.grid_rowconfigure(0, weight=1)
+        tabla_frame = ctk.CTkFrame(cuerpo)
+        tabla_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        self.tree_ubicaciones = self.crear_treeview(
+            tabla_frame, 
+            ("ID", "Ubicación", "Dirección", "Capacidad", "Cantidad de eventos"), 
+            (60, 160, 160, 90, 100)
+        )
+
+        form = ctk.CTkScrollableFrame(cuerpo, width=300)
+        form.grid(row=0, column=1, sticky="nsew")
+
+        self.entry_ub_nombre = ctk.CTkEntry(form, placeholder_text="Nombre (ej. Sala A)")
+        self.entry_ub_nombre.pack(fill="x", padx=10, pady=6)
+
+        self.entry_ub_direccion = ctk.CTkEntry(form, placeholder_text="Dirección")
+        self.entry_ub_direccion.pack(fill="x", padx=10, pady=6)
+
+        self.entry_ub_ciudad = ctk.CTkEntry(form, placeholder_text="Ciudad")
+        self.entry_ub_ciudad.pack(fill="x", padx=10, pady=6)
+
+        self.entry_ub_capacidad = ctk.CTkEntry(form, placeholder_text="Capacidad")
+        self.entry_ub_capacidad.pack(fill="x", padx=10, pady=6)
+
+        ctk.CTkButton(form, text="+ Registrar Ubicación", command=self.agregar_ubicacion).pack(fill="x", padx=10, pady=10)
     # -------------------- REFRESCO GENERAL --------------------
 
     def actualizar_todas_las_tablas(self):
