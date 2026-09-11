@@ -1005,7 +1005,7 @@ class AppAgenda(ctk.CTk):
         try:
             datos = self.datos_disponibilidad_formulario()
             self.ejecutar_consulta("""
-                INSERT INTO disponibilidades (id_usuario, fecha, hora_inicio, hora_fin, estado)
+                INSERT INTO disponibilidades (id_usuario, fecha, hora_inicio, hora_fin, tipos_disponibilidad)
                 VALUES (%s, %s, %s, %s, %s)
             """, datos)
             self.limpiar_form_disponibilidad(); self.actualizar_todas_las_tablas()
@@ -1019,7 +1019,8 @@ class AppAgenda(ctk.CTk):
         try:
             usuario, fecha, h_inicio, h_fin, estado = self.datos_disponibilidad_formulario()
             self.ejecutar_consulta("""
-                UPDATE disponibilidades SET id_usuario=%s, fecha=%s, hora_inicio=%s, hora_fin=%s, estado=%s
+                UPDATE disponibilidades 
+                SET id_usuario=%s, fecha=%s, hora_inicio=%s, hora_fin=%s, tipos_disponibilidad=%s
                 WHERE id_disponibilidad=%s
             """, (usuario, fecha, h_inicio, h_fin, estado, did))
             self.actualizar_todas_las_tablas(); messagebox.showinfo("Éxito", "Disponibilidad actualizada.")
@@ -1040,7 +1041,7 @@ class AppAgenda(ctk.CTk):
     def cargar_datos_disponibilidades(self):
         try:
             rows = self.ejecutar_consulta("""
-                SELECT id_disponibilidad, nombre_usuario, fecha, hora_inicio, hora_fin, estado
+                SELECT id_disponibilidad, id_usuario, nombre, apellido, fecha, hora_inicio, hora_fin, tipos_disponibilidad
                 FROM vista_disponibilidad_usuarios
                 ORDER BY fecha DESC, hora_inicio ASC
             """, fetch=True)
