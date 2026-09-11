@@ -570,6 +570,9 @@ class AppAgenda(ctk.CTk):
                 UPDATE eventos SET id_usuario_propietario=%s, id_categoria=%s, id_ubicacion=%s,
                 titulo=%s, fecha_inicio=%s, fecha_fin=%s WHERE id_evento=%s
             """, (usuario, categoria, ubicacion, titulo, inicio, fin, eid))
+
+            self.limpiar_form_evento();
+            self.actualizar_todas_las_tablas()
             self.cargar_datos_eventos(); messagebox.showinfo("Éxito", "Evento actualizado.")
         except Exception as e:
             messagebox.showerror("No se pudo actualizar", str(e))
@@ -599,6 +602,10 @@ class AppAgenda(ctk.CTk):
                 LEFT JOIN ubicaciones ub ON ub.id_ubicacion = e.id_ubicacion
                 ORDER BY e.fecha_inicio DESC
             """, fetch=True)
+
+            for item in self.tree_eventos.get_children(): 
+                self.tree_eventos.delete(item)
+
             for row in rows:
                 usuario = f"{row[2]} {row[3]} — #{row[1]}"
                 categoria = f"{row[5]} — #{row[4]}"
