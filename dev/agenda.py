@@ -971,6 +971,98 @@ class AppAgenda(ctk.CTk):
         self.entry_disp_fin.delete(0, tk.END); self.entry_disp_fin.insert(0, str(vals[4]))
         self.combo_disp_estado.set(vals[5])
 
+    def limpiar_form_disponibilidad(self):
+        self.tree_disponibilidad.selection_remove(self.tree_disponibilidad.selection())
+        self.combo_disp_usuario.set("Seleccione un usuario")
+        hoy = datetime.now()
+        self.establecer_fecha(self.fecha_disp, hoy)
+        self.entry_disp_inicio.delete(0, tk.END); self.entry_disp_inicio.insert(0, "08:00")
+        self.entry_disp_fin.delete(0, tk.END); self.entry_disp_fin.insert(0, "12:00")
+        self.combo_disp_estado.set("Disponible")
+
+    def datos_disponibilidad_formulario(self):
+        usuario = self.usuarios_combo.get(self.combo_disp_usuario.get())
+        fecha_str = self.obtener_fecha(self.fecha_disp)
+        h_inicio = self.entry_disp_inicio.get().strip()
+        h_fin = self.entry_disp_fin.get().strip()
+        estado = self.combo_disp_estado.get()
+
+        try:
+            dt_inicio = datetime.strptime(f"{fecha_str} {h_inicio}", "%Y-%m-%d %H:%M")
+            dt_fin = datetime.strptime(f"{fecha_str} {h_fin}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            raise ValueError("Las horas deben tener el formato HH:MM (ej. 08:30).")
+
+        if dt_fin <= dt_inicio:
+            raise ValueError("La hora final debe ser posterior a la hora inicial.")
+
+        if usuario is None:
+            raise ValueError("Selecciona un usuario válido.")
+
+        return usuario, fecha_str, h_inicio, h_fin, estado
+
+    def agregar_disponibilidad(self):
+        try:
+            datos = self.datos_disponibilidad_formulario()
+            self.ejecutar_consulta("""
+                INSERT INTO disponibilidades (id_usuario, fecha, hora_inicio, hora_fin, estado)
+                VALUES (%s, %s, %s, %s, %s)
+            """, datos)
+            self.limpiar_form_disponibilidad(); self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Éxito", "Disponibilidad registrada.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def actualizar_disponibilidad(self):
+        did = self.disponibilidad_seleccionada_id()
+        if did is None: return messagebox.showwarning("Selección requerida", "Selecciona un registro.")
+        try:
+            usuario, fecha, h_inicio, h_fin, estado = self.datos_disponibilidad_formulario()
+            self.ejecutar_consulta("""
+                UPDATE disponibilidades SET id_usuario=%s, fecha=%s, hora_inicio=%s, hora_fin=%s, estado=%s
+                WHERE id_disponibilidad=%s
+            """, (usuario, fecha, h_inicio, h_fin, estado, did))
+            self.actualizar_todas_las_tablas(); messagebox.showinfo("Éxito", "Disponibilidad actualizada.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def eliminar_disponibilidad(self):
+        did = self.disponibilidad_seleccionada_id()
+        if did is None: return messagebox.showwarning("Selección requerida", "Selecciona un registro.")
+        if not messagebox.askyesno("Confirmar", "¿Eliminar el registro seleccionado?"): return
+        try:
+            self.ejecutar_consulta("DELETE FROM disponibilidades WHERE id_disponibilidad=%s", (did,))
+            self.limpiar_form_disponibilidad(); self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Eliminado", "Registro eliminado.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def cargar_datos_disponibilidades(self):
+        try:
+            rows = self.ejecutar_consulta("""
+                SELECT id_disponibilidad, nombre_usuario, fecha, hora_inicio, hora_fin, estado
+                FROM vista_disponibilidad_usuarios
+                ORDER BY fecha DESC, hora_inicio ASC
+            """, fetch=True)
+
+            for item in self.tree_disponibilidad.get_children(): 
+                self.tree_disponibilidad.delete(item)
+
+            for row in rows:
+                did = row[0]
+                usuario = f"{row[2]} {row[3]} — #{row[1]}"
+                fecha = str(row[4])
+                h_ini = str(row[5])[:5]
+                h_fin = str(row[6])[:5]
+                estado = row[7]
+
+                self.tree_disponibilidad.insert("", "end", values=(did, usuario, fecha, h_ini, h_fin, estado))
+
+            valores_u = ["Seleccione un usuario"] + list(self.usuarios_combo.keys())
+            self.combo_disp_usuario.configure(values=valores_u)
+        except Exception as e:
+            print(f"Error cargando disponibilidades: {e}")
+
     # -------------------- REFRESCO GENERAL --------------------
 
     def actualizar_todas_las_tablas(self):
