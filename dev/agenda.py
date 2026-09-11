@@ -948,6 +948,7 @@ class AppAgenda(ctk.CTk):
         self.combo_disp_estado.set("Disponible")
         self.combo_disp_estado.pack(fill="x", padx=10, pady=4)
 
+        ctk.CTkButton(form, text="🔍 Buscar Usuarios Libres", command=self.verificar_usuarios_disponibles, fg_color="#2e7d32", hover_color="#1b5e20").pack(fill="x", padx=10, pady=(15, 5))
         ctk.CTkButton(form, text="➕ Registrar Disponibilidad", command=self.agregar_disponibilidad).pack(fill="x", padx=10, pady=(16, 5))
         ctk.CTkButton(form, text="💾 Actualizar seleccionada", command=self.actualizar_disponibilidad).pack(fill="x", padx=10, pady=5)
         ctk.CTkButton(form, text="🧹 Nuevo / Limpiar", command=self.limpiar_form_disponibilidad, fg_color="gray").pack(fill="x", padx=10, pady=5)
@@ -1000,6 +1001,52 @@ class AppAgenda(ctk.CTk):
             raise ValueError("Selecciona un usuario válido.")
 
         return usuario, fecha_str, h_inicio, h_fin, estado
+
+    def verificar_usuarios_disponibles(self):
+        try:
+            fecha_str = self.obtener_fecha(self.fecha_disp)
+            h_inicio = self.entry_disp_inicio.get().strip()
+            h_fin = self.entry_disp_fin.get().strip()
+
+            try:
+                datetime.strptime(f"{fecha_str} {h_inicio}", "%Y-%m-%d %H:%M")
+                datetime.strptime(f"{fecha_str} {h_fin}", "%Y-%m-%d %H:%M")
+            except ValueError:
+                return messagebox.showwarning("Formato inválido", "Ingresa las horas en formato HH:MM (ej. 08:00).")
+
+            dt_inicio = f"{fecha_str} {h_inicio}:00"
+            dt_fin = f"{fecha_str} {h_fin}:00"
+
+            libres = self.ejecutar_consulta("""
+                SELECT u.nombre || ' ' || u.apellido AS usuario
+                FROM usuarios u
+                WHERE u.activo = TRUE
+                -- 1. NO tiene bloqueos de indisponibilidad u ocupación en el rango solicitado
+                AND NOT EXISTS (
+                    SELECT 1 FROM disponibilidades d
+                    WHERE d.id_usuario = u.id_usuario
+                      AND d.fecha = %s
+                      AND d.tipos_disponibilidad IN ('No disponible', 'Ocupado')
+                      AND d.hora_inicio < %s::time
+                      AND d.hora_fin > %s::time
+                )
+                -- 2. NO tiene eventos agendados que se solapen en la agenda
+                AND NOT EXISTS (
+                    SELECT 1 FROM eventos e
+                    WHERE e.id_usuario_propietario = u.id_usuario
+                      AND e.fecha_inicio < %s::timestamp
+                      AND e.fecha_fin > %s::timestamp
+                );
+            """, (fecha_str, h_fin, h_inicio, dt_fin, dt_inicio), fetch=True)
+
+            if not libres:
+                messagebox.showinfo("Consulta de Convocatoria", f"No hay usuarios libres en el rango {h_inicio} - {h_fin} para el {fecha_str}.")
+            else:
+                lista = "\n".join([f"• {r[0]}" for r in libres])
+                messagebox.showinfo("Usuarios Disponibles", f"Usuarios libres para reunión el {fecha_str} ({h_inicio} - {h_fin}):\n\n{lista}")
+
+        except Exception as e:
+            messagebox.showerror("Error al consultar", str(e))
 
     def agregar_disponibilidad(self):
         try:
