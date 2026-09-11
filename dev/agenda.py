@@ -133,7 +133,8 @@ class AppAgenda(ctk.CTk):
             ("Categorías", "📁"),
             ("Eventos", "🗓️"),
             ("Ubicaciones", "📍"),
-            ("Tareas", "✅")
+            ("Tareas", "✅"),
+            ("Disponibilidades", "⏰")
         ], start=2):
             btn = ctk.CTkButton(
                 self.sidebar_frame, text=f"{icono}  {nombre}",
@@ -147,7 +148,7 @@ class AppAgenda(ctk.CTk):
             self.sidebar_frame,
             text="🔄  Recargar datos",
             command=self.actualizar_todas_las_tablas
-        ).grid(row=7, column=0, padx=15, pady=(20, 5), sticky="ew")
+        ).grid(row=8, column=0, padx=15, pady=(20, 5), sticky="ew")
 
         ctk.CTkLabel(self.sidebar_frame, text="APARIENCIA", font=ctk.CTkFont(size=11, weight="bold")).grid(
             row=11, column=0, padx=20, pady=(10, 5), sticky="w"
@@ -174,12 +175,13 @@ class AppAgenda(ctk.CTk):
         self.tab_eventos = self.tabview.add("Eventos")
         self.tab_ubicaciones = self.tabview.add("Ubicaciones")
         self.tab_tareas = self.tabview.add("Tareas")
-
+        self.tab_disponibilidades = self.tabview.add("Disponibilidades")
         self.configurar_pestana_usuarios()
         self.configurar_pestana_categorias()
         self.configurar_pestana_eventos()
         self.configurar_pestana_ubicaciones()
         self.configurar_pestana_tareas()
+        self.configurar_pestana_disponibilidades()
         self.seleccionar_modulo("Usuarios")
 
     def al_cambiar_pestana(self):
@@ -902,6 +904,23 @@ class AppAgenda(ctk.CTk):
             self.combo_tar_evento.configure(values=valores_e)
         except Exception as e:
             print(f"Error cargando tareas: {e}")
+
+    # -------------------- Disponibilidades --------------------
+    def configurar_pestana_disponibilidades(self):
+        self.crear_encabezado(self.tab_disponibilidades, "Disponibilidad Horaria", "Gestiona la disponibilidad de tiempo de los usuarios.")
+
+        cuerpo = ctk.CTkFrame(self.tab_disponibilidades, fg_color="transparent")
+        cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
+        cuerpo.grid_columnconfigure(0, weight=3); cuerpo.grid_columnconfigure(1, weight=1); cuerpo.grid_rowconfigure(0, weight=1)
+
+        tabla_frame = ctk.CTkFrame(cuerpo); tabla_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        form = ctk.CTkScrollableFrame(cuerpo, width=350); form.grid(row=0, column=1, sticky="nsew")
+
+        self.tree_disponibilidad = self.crear_treeview(
+            tabla_frame, 
+            ("ID", "Usuario", "Fecha", "Hora Inicio", "Hora Fin", "Estado"),
+            (60, 180, 130, 110, 110, 110)
+        )
 
     # -------------------- REFRESCO GENERAL --------------------
 
