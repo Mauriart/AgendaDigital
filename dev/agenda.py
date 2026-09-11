@@ -31,6 +31,7 @@ class AppAgenda(ctk.CTk):
         }
 
         self.usuarios_combo = {}
+        self.eventos_combo = {}
         self.categorias_combo = {}
         self.categorias_padre_combo = {}
         self.ubicaciones_combo = {}
@@ -786,7 +787,12 @@ class AppAgenda(ctk.CTk):
         self.combo_tar_usuario.set(vals[1])
         self.combo_tar_evento.set(vals[2])
         self.combo_tar_prioridad.set(vals[4])
-        self.combo_tar_estado.set(vals[5])
+        
+        estado_raw = str(vals[5])
+        if "(" in estado_raw and ")" in estado_raw:
+            estado_raw = estado_raw.split("(")[1].replace(")", "").strip()
+        self.combo_tar_estado.set(estado_raw)
+
         try:
             limite = datetime.strptime(str(vals[6]), "%Y-%m-%d %H:%M")
             self.establecer_fecha(self.fecha_tar_limite, limite)
