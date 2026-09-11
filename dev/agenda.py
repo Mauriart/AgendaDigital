@@ -713,6 +713,59 @@ class AppAgenda(ctk.CTk):
         cuerpo.grid_columnconfigure(1, weight=1)
         cuerpo.grid_rowconfigure(0, weight=1)
 
+        tabla_frame = ctk.CTkFrame(cuerpo); tabla_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        form = ctk.CTkScrollableFrame(cuerpo, width=350); form.grid(row=0, column=1, sticky="nsew")
+
+        # Tabla visual para tareas
+        self.tree_tareas = self.crear_treeview(
+            tabla_frame, 
+            ("ID", "Usuario", "Evento", "Tarea", "Prioridad", "Estado", "Fecha Límite"),
+            (50, 140, 140, 160, 90, 100, 120)
+        )
+        self.tree_tareas.bind("<<TreeviewSelect>>", self.cargar_tarea_seleccionada)
+
+        ctk.CTkLabel(form, text="Formulario de Tarea", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 12))
+
+        self.entry_tar_titulo = ctk.CTkEntry(form, placeholder_text="Título de la tarea")
+        self.entry_tar_titulo.pack(fill="x", padx=10, pady=6)
+
+        self.entry_tar_desc = ctk.CTkEntry(form, placeholder_text="Descripción")
+        self.entry_tar_desc.pack(fill="x", padx=10, pady=6)
+
+        ctk.CTkLabel(form, text="Asignar a Usuario").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tar_usuario = ctk.CTkComboBox(form, values=["Seleccione un usuario"], state="readonly")
+        self.combo_tar_usuario.set("Seleccione un usuario")
+        self.combo_tar_usuario.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Evento Asociado").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tar_evento = ctk.CTkComboBox(form, values=["Seleccione un evento"], state="readonly")
+        self.combo_tar_evento.set("Seleccione un evento")
+        self.combo_tar_evento.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Prioridad").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tar_prioridad = ctk.CTkComboBox(form, values=["Baja", "Media", "Alta"], state="readonly")
+        self.combo_tar_prioridad.set("Media")
+        self.combo_tar_prioridad.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Estado").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tar_estado = ctk.CTkComboBox(form, values=["Pendiente", "En progreso", "Completada"], state="readonly")
+        self.combo_tar_estado.set("Pendiente")
+        self.combo_tar_estado.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Fecha Límite").pack(anchor="w", padx=10, pady=(10, 2))
+        fila_limite = ctk.CTkFrame(form, fg_color="transparent"); fila_limite.pack(fill="x", padx=10)
+        self.fecha_tar_limite = self.crear_selector_fecha(fila_limite)
+        self.fecha_tar_limite.pack(side="left", fill="x", expand=True)
+        self.hora_tar_limite = ctk.CTkEntry(fila_limite, placeholder_text="HH:MM", width=75)
+        self.hora_tar_limite.pack(side="left", padx=(6, 0))
+
+        ctk.CTkButton(form, text="➕ Crear tarea", command=self.agregar_tarea).pack(fill="x", padx=10, pady=(16, 5))
+        ctk.CTkButton(form, text="💾 Actualizar seleccionada", command=self.actualizar_tarea).pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="🧹 Nuevo / Limpiar", command=self.limpiar_form_tarea, fg_color="gray").pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="🗑️ Eliminar seleccionada", command=self.eliminar_tarea, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
+
+        self.limpiar_form_tarea()
+
     # -------------------- REFRESCO GENERAL --------------------
 
     def actualizar_todas_las_tablas(self):
