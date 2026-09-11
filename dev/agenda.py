@@ -1071,6 +1071,7 @@ class AppAgenda(ctk.CTk):
         self.cargar_datos_ubicaciones()
         self.cargar_datos_eventos()
         self.cargar_datos_tareas()
+        self.cargar_datos_disponibilidades()
 
 
 if __name__ == "__main__":
