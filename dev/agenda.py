@@ -922,6 +922,7 @@ class AppAgenda(ctk.CTk):
             (60, 180, 130, 110, 110, 110)
         )
 
+        self.tree_disponibilidad.bind("<<TreeviewSelect>>", self.cargar_disponibilidad_seleccionada)
 
         ctk.CTkLabel(form, text="Formulario de Disponibilidad", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 12))
 
@@ -951,6 +952,24 @@ class AppAgenda(ctk.CTk):
         ctk.CTkButton(form, text="💾 Actualizar seleccionada", command=self.actualizar_disponibilidad).pack(fill="x", padx=10, pady=5)
         ctk.CTkButton(form, text="🧹 Nuevo / Limpiar", command=self.limpiar_form_disponibilidad, fg_color="gray").pack(fill="x", padx=10, pady=5)
         ctk.CTkButton(form, text="🗑️ Eliminar seleccionada", command=self.eliminar_disponibilidad, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
+
+    def disponibilidad_seleccionada_id(self):
+        sel = self.tree_disponibilidad.selection()
+        return self.tree_disponibilidad.item(sel[0])["values"][0] if sel else None
+
+    def cargar_disponibilidad_seleccionada(self, _=None):
+        sel = self.tree_disponibilidad.selection()
+        if not sel: return
+        vals = self.tree_disponibilidad.item(sel[0])["values"]
+        self.combo_disp_usuario.set(vals[1])
+        try:
+            f_obj = datetime.strptime(str(vals[2]), "%Y-%m-%d")
+            self.establecer_fecha(self.fecha_disp, f_obj)
+        except ValueError:
+            pass
+        self.entry_disp_inicio.delete(0, tk.END); self.entry_disp_inicio.insert(0, str(vals[3]))
+        self.entry_disp_fin.delete(0, tk.END); self.entry_disp_fin.insert(0, str(vals[4]))
+        self.combo_disp_estado.set(vals[5])
 
     # -------------------- REFRESCO GENERAL --------------------
 
