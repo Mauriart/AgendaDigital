@@ -922,6 +922,36 @@ class AppAgenda(ctk.CTk):
             (60, 180, 130, 110, 110, 110)
         )
 
+
+        ctk.CTkLabel(form, text="Formulario de Disponibilidad", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 12))
+
+        ctk.CTkLabel(form, text="Usuario").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_disp_usuario = ctk.CTkComboBox(form, values=["Seleccione un usuario"], state="readonly")
+        self.combo_disp_usuario.set("Seleccione un usuario")
+        self.combo_disp_usuario.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Fecha").pack(anchor="w", padx=10, pady=(10, 2))
+        self.fecha_disp = self.crear_selector_fecha(form)
+        self.fecha_disp.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Hora Inicio (HH:MM)").pack(anchor="w", padx=10, pady=(8, 2))
+        self.entry_disp_inicio = ctk.CTkEntry(form, placeholder_text="08:00")
+        self.entry_disp_inicio.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Hora Fin (HH:MM)").pack(anchor="w", padx=10, pady=(8, 2))
+        self.entry_disp_fin = ctk.CTkEntry(form, placeholder_text="12:00")
+        self.entry_disp_fin.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Estado / Condición").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_disp_estado = ctk.CTkComboBox(form, values=["Disponible", "No disponible", "Ocupado"], state="readonly")
+        self.combo_disp_estado.set("Disponible")
+        self.combo_disp_estado.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkButton(form, text="➕ Registrar Disponibilidad", command=self.agregar_disponibilidad).pack(fill="x", padx=10, pady=(16, 5))
+        ctk.CTkButton(form, text="💾 Actualizar seleccionada", command=self.actualizar_disponibilidad).pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="🧹 Nuevo / Limpiar", command=self.limpiar_form_disponibilidad, fg_color="gray").pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="🗑️ Eliminar seleccionada", command=self.eliminar_disponibilidad, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
+
     # -------------------- REFRESCO GENERAL --------------------
 
     def actualizar_todas_las_tablas(self):
