@@ -609,6 +609,8 @@ class AppAgenda(ctk.CTk):
             for item in self.tree_eventos.get_children(): 
                 self.tree_eventos.delete(item)
 
+            self.eventos_combo = {}
+
             for row in rows:
                 usuario = f"{row[2]} {row[3]} — #{row[1]}"
                 categoria = f"{row[5]} — #{row[4]}"
@@ -619,12 +621,19 @@ class AppAgenda(ctk.CTk):
                 
                 self.tree_eventos.insert("", "end", values=(row[0], usuario, categoria, ubicacion, titulo, inicio, fin))
 
+                etiqueta_ev = f"{titulo} — #{row[0]}"
+                self.eventos_combo[etiqueta_ev] = row[0]
+
             valores_u = ["Seleccione un usuario"] + list(self.usuarios_combo.keys())
             valores_c = ["Seleccione una categoría"] + list(self.categorias_combo.keys())
             valores_ub = ["Seleccione una ubicación"] + list(self.ubicaciones_combo.keys())
             self.combo_ev_usuario.configure(values=valores_u)
             self.combo_ev_categoria.configure(values=valores_c)
             self.combo_ev_ubicacion.configure(values=valores_ub)
+
+            if hasattr(self, "combo_tar_evento"):
+                valores_e = ["Seleccione un evento"] + list(self.eventos_combo.keys())
+                self.combo_tar_evento.configure(values=valores_e)
         except Exception as e:
             print(f"Error cargando eventos: {e}")
 
@@ -894,8 +903,8 @@ class AppAgenda(ctk.CTk):
         self.cargar_datos_usuarios()
         self.cargar_datos_categorias()
         self.cargar_datos_ubicaciones()
-        self.cargar_datos_tareas()
         self.cargar_datos_eventos()
+        self.cargar_datos_tareas()
 
 
 if __name__ == "__main__":
