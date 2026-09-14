@@ -133,7 +133,8 @@ class AppAgenda(ctk.CTk):
             ("Categorías", "📁"),
             ("Eventos", "🗓️"),
             ("Ubicaciones", "📍"),
-            ("Tareas", "✅")
+            ("Tareas", "✅"),
+            ("Disponibilidades", "⏰")
         ], start=2):
             btn = ctk.CTkButton(
                 self.sidebar_frame, text=f"{icono}  {nombre}",
@@ -147,7 +148,7 @@ class AppAgenda(ctk.CTk):
             self.sidebar_frame,
             text="🔄  Recargar datos",
             command=self.actualizar_todas_las_tablas
-        ).grid(row=7, column=0, padx=15, pady=(20, 5), sticky="ew")
+        ).grid(row=8, column=0, padx=15, pady=(20, 5), sticky="ew")
 
         ctk.CTkLabel(self.sidebar_frame, text="APARIENCIA", font=ctk.CTkFont(size=11, weight="bold")).grid(
             row=11, column=0, padx=20, pady=(10, 5), sticky="w"
@@ -174,12 +175,13 @@ class AppAgenda(ctk.CTk):
         self.tab_eventos = self.tabview.add("Eventos")
         self.tab_ubicaciones = self.tabview.add("Ubicaciones")
         self.tab_tareas = self.tabview.add("Tareas")
-
+        self.tab_disponibilidades = self.tabview.add("Disponibilidades")
         self.configurar_pestana_usuarios()
         self.configurar_pestana_categorias()
         self.configurar_pestana_eventos()
         self.configurar_pestana_ubicaciones()
         self.configurar_pestana_tareas()
+        self.configurar_pestana_disponibilidades()
         self.seleccionar_modulo("Usuarios")
 
     def al_cambiar_pestana(self):
@@ -903,6 +905,283 @@ class AppAgenda(ctk.CTk):
         except Exception as e:
             print(f"Error cargando tareas: {e}")
 
+    # -------------------- Disponibilidades --------------------
+    def configurar_pestana_disponibilidades(self):
+        self.crear_encabezado(self.tab_disponibilidades, "Disponibilidad Horaria", "Gestiona la disponibilidad de tiempo de los usuarios.")
+
+        cuerpo = ctk.CTkFrame(self.tab_disponibilidades, fg_color="transparent")
+        cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
+        cuerpo.grid_columnconfigure(0, weight=3); cuerpo.grid_columnconfigure(1, weight=1); cuerpo.grid_rowconfigure(0, weight=1)
+
+        tabla_frame = ctk.CTkFrame(cuerpo); tabla_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        form = ctk.CTkScrollableFrame(cuerpo, width=350); form.grid(row=0, column=1, sticky="nsew")
+
+        self.tree_disponibilidad = self.crear_treeview(
+            tabla_frame, 
+            ("ID", "Usuario", "Fecha", "Hora Inicio", "Hora Fin", "Estado"),
+            (60, 180, 130, 110, 110, 110)
+        )
+
+        self.tree_disponibilidad.bind("<<TreeviewSelect>>", self.cargar_disponibilidad_seleccionada)
+
+        ctk.CTkLabel(form, text="Formulario de Disponibilidad", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 12))
+
+        ctk.CTkLabel(form, text="Usuario").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_disp_usuario = ctk.CTkComboBox(form, values=["Seleccione un usuario"], state="readonly")
+        self.combo_disp_usuario.set("Seleccione un usuario")
+        self.combo_disp_usuario.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Fecha").pack(anchor="w", padx=10, pady=(10, 2))
+        self.fecha_disp = self.crear_selector_fecha(form)
+        self.fecha_disp.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Hora Inicio (HH:MM)").pack(anchor="w", padx=10, pady=(8, 2))
+        self.entry_disp_inicio = ctk.CTkEntry(form, placeholder_text="08:00")
+        self.entry_disp_inicio.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Hora Fin (HH:MM)").pack(anchor="w", padx=10, pady=(8, 2))
+        self.entry_disp_fin = ctk.CTkEntry(form, placeholder_text="12:00")
+        self.entry_disp_fin.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Estado / Condición").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_disp_estado = ctk.CTkComboBox(form, values=["Disponible", "No disponible", "Ocupado"], state="readonly")
+        self.combo_disp_estado.set("Disponible")
+        self.combo_disp_estado.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkButton(form, text="🔍 Buscar Usuarios Libres", command=self.verificar_usuarios_disponibles, fg_color="#2e7d32", hover_color="#1b5e20").pack(fill="x", padx=10, pady=(15, 5))
+        ctk.CTkButton(form, text="➕ Registrar Disponibilidad", command=self.agregar_disponibilidad).pack(fill="x", padx=10, pady=(16, 5))
+        ctk.CTkButton(form, text="💾 Actualizar seleccionada", command=self.actualizar_disponibilidad).pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="🧹 Nuevo / Limpiar", command=self.limpiar_form_disponibilidad, fg_color="gray").pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="🗑️ Eliminar seleccionada", command=self.eliminar_disponibilidad, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
+
+    def disponibilidad_seleccionada_id(self):
+        sel = self.tree_disponibilidad.selection()
+        return self.tree_disponibilidad.item(sel[0])["values"][0] if sel else None
+
+    def cargar_disponibilidad_seleccionada(self, _=None):
+        sel = self.tree_disponibilidad.selection()
+        if not sel: return
+        vals = self.tree_disponibilidad.item(sel[0])["values"]
+        self.combo_disp_usuario.set(vals[1])
+        try:
+            f_obj = datetime.strptime(str(vals[2]), "%Y-%m-%d")
+            self.establecer_fecha(self.fecha_disp, f_obj)
+        except ValueError:
+            pass
+        self.entry_disp_inicio.delete(0, tk.END); self.entry_disp_inicio.insert(0, str(vals[3]))
+        self.entry_disp_fin.delete(0, tk.END); self.entry_disp_fin.insert(0, str(vals[4]))
+        self.combo_disp_estado.set(vals[5])
+
+    def limpiar_form_disponibilidad(self):
+        self.tree_disponibilidad.selection_remove(self.tree_disponibilidad.selection())
+        self.combo_disp_usuario.set("Seleccione un usuario")
+        hoy = datetime.now()
+        self.establecer_fecha(self.fecha_disp, hoy)
+        self.entry_disp_inicio.delete(0, tk.END); self.entry_disp_inicio.insert(0, "08:00")
+        self.entry_disp_fin.delete(0, tk.END); self.entry_disp_fin.insert(0, "12:00")
+        self.combo_disp_estado.set("Disponible")
+
+    def datos_disponibilidad_formulario(self):
+        usuario = self.usuarios_combo.get(self.combo_disp_usuario.get())
+        fecha_str = self.obtener_fecha(self.fecha_disp)
+        h_inicio = self.entry_disp_inicio.get().strip()
+        h_fin = self.entry_disp_fin.get().strip()
+        estado = self.combo_disp_estado.get()
+
+        try:
+            dt_inicio = datetime.strptime(f"{fecha_str} {h_inicio}", "%Y-%m-%d %H:%M")
+            dt_fin = datetime.strptime(f"{fecha_str} {h_fin}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            raise ValueError("Las horas deben tener el formato HH:MM (ej. 08:30).")
+
+        if dt_fin <= dt_inicio:
+            raise ValueError("La hora final debe ser posterior a la hora inicial.")
+
+        if usuario is None:
+            raise ValueError("Selecciona un usuario válido.")
+
+        return usuario, fecha_str, h_inicio, h_fin, estado
+
+    def verificar_usuarios_disponibles(self):
+        try:
+            fecha_str = self.obtener_fecha(self.fecha_disp)
+            h_inicio = self.entry_disp_inicio.get().strip()
+            h_fin = self.entry_disp_fin.get().strip()
+
+            try:
+                datetime.strptime(f"{fecha_str} {h_inicio}", "%Y-%m-%d %H:%M")
+                datetime.strptime(f"{fecha_str} {h_fin}", "%Y-%m-%d %H:%M")
+            except ValueError:
+                return messagebox.showwarning("Formato inválido", "Ingresa las horas en formato HH:MM (ej. 08:00).")
+
+            dt_inicio = f"{fecha_str} {h_inicio}:00"
+            dt_fin = f"{fecha_str} {h_fin}:00"
+
+            libres = self.ejecutar_consulta("""
+                SELECT u.nombre || ' ' || u.apellido AS usuario
+                FROM usuarios u
+                WHERE u.activo = TRUE
+                -- 1. NO tiene bloqueos de indisponibilidad u ocupación en el rango solicitado
+                AND NOT EXISTS (
+                    SELECT 1 FROM disponibilidades d
+                    WHERE d.id_usuario = u.id_usuario
+                      AND d.fecha = %s
+                      AND d.tipos_disponibilidad IN ('No disponible', 'Ocupado')
+                      AND d.hora_inicio < %s::time
+                      AND d.hora_fin > %s::time
+                )
+                -- 2. NO tiene eventos agendados que se solapen en la agenda
+                AND NOT EXISTS (
+                    SELECT 1 FROM eventos e
+                    WHERE e.id_usuario_propietario = u.id_usuario
+                      AND e.fecha_inicio < %s::timestamp
+                      AND e.fecha_fin > %s::timestamp
+                );
+            """, (fecha_str, h_fin, h_inicio, dt_fin, dt_inicio), fetch=True)
+
+            if not libres:
+                messagebox.showinfo("Consulta de Convocatoria", f"No hay usuarios libres en el rango {h_inicio} - {h_fin} para el {fecha_str}.")
+            else:
+                lista = "\n".join([f"• {r[0]}" for r in libres])
+                messagebox.showinfo("Usuarios Disponibles", f"Usuarios libres para reunión el {fecha_str} ({h_inicio} - {h_fin}):\n\n{lista}")
+
+        except Exception as e:
+            messagebox.showerror("Error al consultar", str(e))
+
+    def agregar_disponibilidad(self):
+        try:
+            usuario, fecha, h_inicio, h_fin, estado = self.datos_disponibilidad_formulario()
+
+            dt_inicio = f"{fecha} {h_inicio}:00"
+            dt_fin = f"{fecha} {h_fin}:00"
+
+            traslape_disp = self.ejecutar_consulta("""
+                SELECT 1 FROM disponibilidades
+                WHERE id_usuario = %s
+                  AND fecha = %s
+                  AND hora_inicio < %s::time
+                  AND hora_fin > %s::time
+            """, (usuario, fecha, h_fin, h_inicio), fetch=True)
+
+            if traslape_disp:
+                return messagebox.showwarning(
+                    "Conflicto de Horario", 
+                    f"El usuario ya tiene un registro de disponibilidad que se solapa con el rango {h_inicio} - {h_fin} para el día {fecha}."
+                )
+
+            if estado == "Disponible":
+                evento_existente = self.ejecutar_consulta("""
+                    SELECT titulo FROM eventos
+                    WHERE id_usuario_propietario = %s
+                      AND fecha_inicio < %s::timestamp
+                      AND fecha_fin > %s::timestamp
+                """, (usuario, dt_fin, dt_inicio), fetch=True)
+
+                if evento_existente:
+                    return messagebox.showwarning(
+                        "Conflicto con Evento",
+                        f"El usuario no puede marcarse como 'Disponible' porque ya tiene agendado el evento '{evento_existente[0][0]}' en ese mismo horario."
+                    )
+
+            self.ejecutar_consulta("""
+                INSERT INTO disponibilidades (id_usuario, fecha, hora_inicio, hora_fin, tipos_disponibilidad)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (usuario, fecha, h_inicio, h_fin, estado))
+
+            self.limpiar_form_disponibilidad()
+            self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Éxito", "Disponibilidad registrada correctamente.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def actualizar_disponibilidad(self):
+        did = self.disponibilidad_seleccionada_id()
+        if did is None: 
+            return messagebox.showwarning("Selección requerida", "Selecciona un registro.")
+        try:
+            usuario, fecha, h_inicio, h_fin, estado = self.datos_disponibilidad_formulario()
+
+            dt_inicio = f"{fecha} {h_inicio}:00"
+            dt_fin = f"{fecha} {h_fin}:00"
+
+            traslape_disp = self.ejecutar_consulta("""
+                SELECT 1 FROM disponibilidades
+                WHERE id_usuario = %s
+                  AND fecha = %s
+                  AND hora_inicio < %s::time
+                  AND hora_fin > %s::time
+                  AND id_disponibilidad != %s
+            """, (usuario, fecha, h_fin, h_inicio, did), fetch=True)
+
+            if traslape_disp:
+                return messagebox.showwarning(
+                    "Conflicto de Horario", 
+                    f"El rango {h_inicio} - {h_fin} se solapa con otro bloque horario del usuario."
+                )
+
+            # 2. Validar que no tenga un Evento agendado en ese horario
+            if estado == "Disponible":
+                evento_existente = self.ejecutar_consulta("""
+                    SELECT titulo FROM eventos
+                    WHERE id_usuario_propietario = %s
+                      AND fecha_inicio < %s::timestamp
+                      AND fecha_fin > %s::timestamp
+                """, (usuario, dt_fin, dt_inicio), fetch=True)
+
+                if evento_existente:
+                    return messagebox.showwarning(
+                        "Conflicto con Evento",
+                        f"El usuario no puede marcarse como 'Disponible' porque ya tiene agendado el evento '{evento_existente[0][0]}' en ese mismo horario."
+                    )
+
+            self.ejecutar_consulta("""
+                UPDATE disponibilidades 
+                SET id_usuario=%s, fecha=%s, hora_inicio=%s, hora_fin=%s, tipos_disponibilidad=%s
+                WHERE id_disponibilidad=%s
+            """, (usuario, fecha, h_inicio, h_fin, estado, did))
+
+            self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Éxito", "Disponibilidad actualizada correctamente.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def eliminar_disponibilidad(self):
+        did = self.disponibilidad_seleccionada_id()
+        if did is None: return messagebox.showwarning("Selección requerida", "Selecciona un registro.")
+        if not messagebox.askyesno("Confirmar", "¿Eliminar el registro seleccionado?"): return
+        try:
+            self.ejecutar_consulta("DELETE FROM disponibilidades WHERE id_disponibilidad=%s", (did,))
+            self.limpiar_form_disponibilidad(); self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Eliminado", "Registro eliminado.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def cargar_datos_disponibilidades(self):
+        try:
+            rows = self.ejecutar_consulta("""
+                SELECT id_disponibilidad, id_usuario, nombre, apellido, fecha, hora_inicio, hora_fin, tipos_disponibilidad
+                FROM vista_disponibilidad_usuarios
+                ORDER BY fecha DESC, hora_inicio ASC
+            """, fetch=True)
+
+            for item in self.tree_disponibilidad.get_children(): 
+                self.tree_disponibilidad.delete(item)
+
+            for row in rows:
+                did = row[0]
+                usuario = f"{row[2]} {row[3]} — #{row[1]}"
+                fecha = str(row[4])
+                h_ini = str(row[5])[:5]
+                h_fin = str(row[6])[:5]
+                estado = row[7]
+
+                self.tree_disponibilidad.insert("", "end", values=(did, usuario, fecha, h_ini, h_fin, estado))
+
+            valores_u = ["Seleccione un usuario"] + list(self.usuarios_combo.keys())
+            self.combo_disp_usuario.configure(values=valores_u)
+        except Exception as e:
+            print(f"Error cargando disponibilidades: {e}")
+
     # -------------------- REFRESCO GENERAL --------------------
 
     def actualizar_todas_las_tablas(self):
@@ -911,6 +1190,7 @@ class AppAgenda(ctk.CTk):
         self.cargar_datos_ubicaciones()
         self.cargar_datos_eventos()
         self.cargar_datos_tareas()
+        self.cargar_datos_disponibilidades()
 
 
 if __name__ == "__main__":
