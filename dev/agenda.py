@@ -1050,39 +1050,61 @@ class AppAgenda(ctk.CTk):
 
     def agregar_disponibilidad(self):
         try:
-            datos = self.datos_disponibilidad_formulario()
-            id_usuario, fecha, h_inicio, h_fin, estado = datos
+            usuario, fecha, h_inicio, h_fin, estado = self.datos_disponibilidad_formulario()
 
-            solapados = self.ejecutar_consulta("""
+            dt_inicio = f"{fecha} {h_inicio}:00"
+            dt_fin = f"{fecha} {h_fin}:00"
+
+            traslape_disp = self.ejecutar_consulta("""
                 SELECT 1 FROM disponibilidades
                 WHERE id_usuario = %s
                   AND fecha = %s
                   AND hora_inicio < %s::time
                   AND hora_fin > %s::time
-            """, (id_usuario, fecha, h_fin, h_inicio), fetch=True)
+            """, (usuario, fecha, h_fin, h_inicio), fetch=True)
 
-            if solapados:
+            if traslape_disp:
                 return messagebox.showwarning(
                     "Conflicto de Horario", 
-                    "El usuario ya tiene un registro de disponibilidad u ocupación que se solapa con este rango de tiempo."
+                    f"El usuario ya tiene un registro de disponibilidad que se solapa con el rango {h_inicio} - {h_fin} para el día {fecha}."
                 )
+
+            if estado == "Disponible":
+                evento_existente = self.ejecutar_consulta("""
+                    SELECT titulo FROM eventos
+                    WHERE id_usuario_propietario = %s
+                      AND fecha_inicio < %s::timestamp
+                      AND fecha_fin > %s::timestamp
+                """, (usuario, dt_fin, dt_inicio), fetch=True)
+
+                if evento_existente:
+                    return messagebox.showwarning(
+                        "Conflicto con Evento",
+                        f"El usuario no puede marcarse como 'Disponible' porque ya tiene agendado el evento '{evento_existente[0][0]}' en ese mismo horario."
+                    )
 
             self.ejecutar_consulta("""
                 INSERT INTO disponibilidades (id_usuario, fecha, hora_inicio, hora_fin, tipos_disponibilidad)
                 VALUES (%s, %s, %s, %s, %s)
-            """, datos)
-            self.limpiar_form_disponibilidad(); self.actualizar_todas_las_tablas()
-            messagebox.showinfo("Éxito", "Disponibilidad registrada.")
+            """, (usuario, fecha, h_inicio, h_fin, estado))
+
+            self.limpiar_form_disponibilidad()
+            self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Éxito", "Disponibilidad registrada correctamente.")
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
     def actualizar_disponibilidad(self):
         did = self.disponibilidad_seleccionada_id()
-        if did is None: return messagebox.showwarning("Selección requerida", "Selecciona un registro.")
+        if did is None: 
+            return messagebox.showwarning("Selección requerida", "Selecciona un registro.")
         try:
             usuario, fecha, h_inicio, h_fin, estado = self.datos_disponibilidad_formulario()
 
-            solapados = self.ejecutar_consulta("""
+            dt_inicio = f"{fecha} {h_inicio}:00"
+            dt_fin = f"{fecha} {h_fin}:00"
+
+            traslape_disp = self.ejecutar_consulta("""
                 SELECT 1 FROM disponibilidades
                 WHERE id_usuario = %s
                   AND fecha = %s
@@ -1091,18 +1113,35 @@ class AppAgenda(ctk.CTk):
                   AND id_disponibilidad != %s
             """, (usuario, fecha, h_fin, h_inicio, did), fetch=True)
 
-            if solapados:
+            if traslape_disp:
                 return messagebox.showwarning(
                     "Conflicto de Horario", 
-                    "El rango especificado se solapa con otro registro existente de este usuario."
+                    f"El rango {h_inicio} - {h_fin} se solapa con otro bloque horario del usuario."
                 )
+
+            # 2. Validar que no tenga un Evento agendado en ese horario
+            if estado == "Disponible":
+                evento_existente = self.ejecutar_consulta("""
+                    SELECT titulo FROM eventos
+                    WHERE id_usuario_propietario = %s
+                      AND fecha_inicio < %s::timestamp
+                      AND fecha_fin > %s::timestamp
+                """, (usuario, dt_fin, dt_inicio), fetch=True)
+
+                if evento_existente:
+                    return messagebox.showwarning(
+                        "Conflicto con Evento",
+                        f"El usuario no puede marcarse como 'Disponible' porque ya tiene agendado el evento '{evento_existente[0][0]}' en ese mismo horario."
+                    )
 
             self.ejecutar_consulta("""
                 UPDATE disponibilidades 
                 SET id_usuario=%s, fecha=%s, hora_inicio=%s, hora_fin=%s, tipos_disponibilidad=%s
                 WHERE id_disponibilidad=%s
             """, (usuario, fecha, h_inicio, h_fin, estado, did))
-            self.actualizar_todas_las_tablas(); messagebox.showinfo("Éxito", "Disponibilidad actualizada.")
+
+            self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Éxito", "Disponibilidad actualizada correctamente.")
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
