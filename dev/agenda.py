@@ -1051,6 +1051,22 @@ class AppAgenda(ctk.CTk):
     def agregar_disponibilidad(self):
         try:
             datos = self.datos_disponibilidad_formulario()
+            id_usuario, fecha, h_inicio, h_fin, estado = datos
+
+            solapados = self.ejecutar_consulta("""
+                SELECT 1 FROM disponibilidades
+                WHERE id_usuario = %s
+                  AND fecha = %s
+                  AND hora_inicio < %s::time
+                  AND hora_fin > %s::time
+            """, (id_usuario, fecha, h_fin, h_inicio), fetch=True)
+
+            if solapados:
+                return messagebox.showwarning(
+                    "Conflicto de Horario", 
+                    "El usuario ya tiene un registro de disponibilidad u ocupación que se solapa con este rango de tiempo."
+                )
+
             self.ejecutar_consulta("""
                 INSERT INTO disponibilidades (id_usuario, fecha, hora_inicio, hora_fin, tipos_disponibilidad)
                 VALUES (%s, %s, %s, %s, %s)
@@ -1065,6 +1081,22 @@ class AppAgenda(ctk.CTk):
         if did is None: return messagebox.showwarning("Selección requerida", "Selecciona un registro.")
         try:
             usuario, fecha, h_inicio, h_fin, estado = self.datos_disponibilidad_formulario()
+
+            solapados = self.ejecutar_consulta("""
+                SELECT 1 FROM disponibilidades
+                WHERE id_usuario = %s
+                  AND fecha = %s
+                  AND hora_inicio < %s::time
+                  AND hora_fin > %s::time
+                  AND id_disponibilidad != %s
+            """, (usuario, fecha, h_fin, h_inicio, did), fetch=True)
+
+            if solapados:
+                return messagebox.showwarning(
+                    "Conflicto de Horario", 
+                    "El rango especificado se solapa con otro registro existente de este usuario."
+                )
+
             self.ejecutar_consulta("""
                 UPDATE disponibilidades 
                 SET id_usuario=%s, fecha=%s, hora_inicio=%s, hora_fin=%s, tipos_disponibilidad=%s
